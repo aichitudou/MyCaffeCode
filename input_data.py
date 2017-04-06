@@ -53,7 +53,26 @@ def decode_from_tfrecords(filename,num_epoch=None):
 
 # 根据队列流数据格式，解压出一张图片后，输入一张图片，对其做预处理、及样本随机扩充
 def get_batch(image,label,batch_size,crop_size):
-	
+	#数据扩充变换
+	distorted_image=tf.random_crop(image,[crop_size,crop_size,3])#随机裁剪
+	distorted_image=tf.image.random_flip_up_down(distorted_image)#上下随机翻转
+	#distorted_image=tf.image.random_brightness(distorted_image,max_delta=63)#亮度变化 
+	#distorted_image=tf.image.random_contrast(distorted_image,lower=0.2,upper=1.8)#对比度变化
+	#生成batch，shuffle_batch的参数：capacity用于定义shuffle的范围，如果是对整个训练数据集，获取batch，那么 capacity就应该够大，保证数据打的足够乱
+	images,label_batch=tf.train.shuffle_batch([distorted_image,label],batch_size=batch_size,num_threads=16,capacity=5000,min_after_dequeue=1000)
+	#调试显示
+	#tf.image_summary('images',images)
+
+	return images, tf.reshape(label_batch,[batch_size])
+
+#这个是用于测试阶段，使用的get_batch()函数
+def get_test_batch(image,label,batch_size,crop_size):
+	#数据扩充变换
+	distorted_image=tf.image.central_crop(image,39./45.)
+	distorted_image=tf.random_crop(distorted_image,[crop_size,crop_size,3])#随机裁剪
+	images,label_batch=tf.train.batch([distorted_image,label],batch_size=batch_size)
+	return images,tf.reshape(label_batch,[batch_size])
+
 
 
 
@@ -63,7 +82,7 @@ def test():
 	image, label = decode_from_tfrecords('data/data.tfrecords')
 	batch_image,batch_label = get_batch(image,label)#生成测试的样例batch
 	init = tf.initialize_all_variables()
-
+	
 
 
 
